@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Map and Alert Preview</title>
+  <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <link href="https://api.mapbox.com/mapbox-gl-js/v3.7.0/mapbox-gl.css" rel="stylesheet" />
+  <script src="https://api.mapbox.com/mapbox-gl-js/v3.7.0/mapbox-gl.js"></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+      justify-content: flex-start;
+      align-items: center;
+      font-family: 'Helvetica', sans-serif;
+    }
+
+
+    #map-container, #alert-container {
+      height: 100%;
+    }
+
+
+    #map-container {
+      width: 50%;
+    }
+
+
+    #map {
+      width: 100%;
+      height: 100%;
+    }
+
+
+    #alert-container {
+      width: 50%;
+      display: none;
+      flex-direction: column;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+
+    #alert-header {
+      font-size: 20px;
+      text-align: center;
+      margin-bottom: 20px;
+      font-weight: bold; /* Make the header text bold */
+      color: #666; /* Change text color to darker grey */
+    }
+
+
+    #image-container {
+      height: 70%; /* Keep this at 70% of the alert container */
+      width: 100%;
+      background-color: #f0f0f0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+      overflow: hidden; /* Hide overflow to ensure images fit nicely */
+    }
+
+
+    #image-preview {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain; /* Ensure the image fits without distorting */
+    }
+
+
+    #alert-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px; /* Decrease font size for the table */
+    }
+
+
+    #alert-table td {
+      padding: 5px; /* Adjust padding for smaller table */
+      border: 1px solid #ccc;
+      text-align: center; /* Center align text in both columns */
+    }
+
+
+    /* Style for the first column */
+    #alert-table td:first-child {
+      font-weight: bold; /* Make the first column bold */
+      color: #b8a57f; /* Set color for the first column */
+      width: 50%; /* Set width for the first column to 50% */
+    }
+
+
+    /* Style for the second column */
+    #alert-table td:nth-child(2) {
+      font-weight: bold; /* Make the second column text bold */
+      color: #8a1538; /* Set color for the second column */
+      width: 50%; /* Set width for the second column to 50% */
+    }
+  </style>
+</head>
+<body>
+  <!-- Map Container -->
+  <div id="map-container">
+    <div id="map"></div>
+  </div>
+
+
+  <!-- Alert Preview Container -->
+  <div id="alert-container">
+    <div id="alert-header">Alert Preview</div>
+
+
+    <div id="image-container">
+      <img id="image-preview" src="" alt="Image Preview" />
+    </div>
+
+
+    <table id="alert-table">
+      <tr><td>Alert ID:</td><td id="alert-id">1</td></tr>
+      <tr><td>DateTime Reported:</td><td id="alert-datetime">2024-10-01 10:00 AM</td></tr>
+      <tr><td>Alert Class:</td><td id="alert-class">Sidewalks</td></tr>
+      <tr><td>Urgency:</td><td id="alert-urgency">Regular</td></tr>
+      <tr><td>Status:</td><td id="alert-status">Inspected</td></tr>
+    </table>
+  </div>
+
+
+  <script>
+    mapboxgl.accessToken = 'pk.eyJ1Ijoic2FtYW4ta2hhbiIsImEiOiJjbTFqOXh5Z3EwbTYzMnFvY294c25uZWM1In0.NVqAA0Y413PYuW4duA-sIg';
+    const map = new mapboxgl.Map({
+      container: 'map',
+      style: 'mapbox://styles/saman-khan/cm1ka5qgt005c01p89rx35huk',
+      center: [46.6753, 24.7136], // Centering the map on Riyadh
+      zoom: 10,
+      pitch: 60,
+      bearing: -20
+    });
+
+
+    // Add zoom controls
+    const nav = new mapboxgl.NavigationControl();
+    map.addControl(nav, 'top-right');
+
+
+    map.dragPan.enable();
+    map.dragRotate.enable();
+
+
+    // Function to add markers to the map with dynamic images based on urgency
+    function addMarker(coordinates, id, label, details) {
+      const markerElement = document.createElement('div');
+      // Determine the image based on the urgency
+      const pointerImage = details.urgency === 'Regular' ? 'yellowcircle.png' : 'redlight.gif';
+      markerElement.style.backgroundImage = `url(${pointerImage})`; // Use the appropriate pointer image
+      markerElement.style.backgroundSize = 'contain';
+      markerElement.style.width = '15px'; // Adjust marker size as needed
+      markerElement.style.height = '15px';
+
+
+      const marker = new mapboxgl.Marker(markerElement)
+        .setLngLat(coordinates)
+        .setPopup(new mapboxgl.Popup().setHTML(`<h3>${label}</h3>`)) // Optional popup
+        .addTo(map);
+
+
+      // Add click event to the marker
+      markerElement.addEventListener('click', () => {
+        // Pan the map to the marker's location
+        map.flyTo({
+          center: coordinates,
+          zoom: 17,
+          essential: true // this animation is considered essential with respect to prefers-reduced-motion
+        });
+
+
+        // Change the image in the image container
+        document.getElementById('image-preview').src = `${id}.jpg`; // Change the image source based on the ID
+
+
+        // Update the alert details
+        document.getElementById('alert-id').innerText = details.id;
+        document.getElementById('alert-datetime').innerText = details.datetime;
+        document.getElementById('alert-class').innerText = details.class;
+        document.getElementById('alert-urgency').innerText = details.urgency;
+        document.getElementById('alert-status').innerText = details.status;
+
+
+         // Show the alert container when a marker is clicked
+         document.getElementById('alert-container').style.display = 'flex';
+      });
+    }
+
+
+    // Sample alert data
+    const alertData = [
+      { id: 1, datetime: '2024-10-01 10:00 AM', class: 'Potholes', urgency: 'Regular', status: 'Inspected', street: 'King Fahd Road'},
+      { id: 2, datetime: '2024-10-02 11:00 AM', class: 'Barriers', urgency: 'Regular', status: 'In progress', street: 'Prince Mohammed Bin Abdulaziz Road'},
+      { id: 3, datetime: '2024-10-03 09:30 AM', class: 'Barriers', urgency: 'Regular', status: 'Inspected' , street: 'King Saud Road'},
+      { id: 4, datetime: '2024-10-04 12:15 PM', class: 'Sidewalks', urgency: 'Regular', status: 'In progress', street: 'Al-Madinah Road' },
+      { id: 5, datetime: '2024-10-05 08:45 AM', class: 'Potholes', urgency: 'Regular', status: 'Inspected', street: 'Al-Haramain Expressway' },
+      { id: 6, datetime: '2024-10-06 10:20 AM', class: 'Barriers', urgency: 'Regular', status: 'In progress' , street: 'Khaleej Road'},
+      { id: 7, datetime: '2024-10-07 01:30 PM', class: 'Potholes', urgency: 'Urgent', status: 'Inspected', street: 'Olaya Street' },
+      { id: 8, datetime: '2024-10-08 02:00 PM', class: 'Potholes', urgency: 'Urgent', status: 'In progress' , street: 'Eastern Ring Road'},
+      { id: 9, datetime: '2024-10-09 11:00 AM', class: 'Sidewalks', urgency: 'Regular', status: 'Inspected', street: 'Al-Ahsa Road' },
+      { id: 10, datetime: '2024-10-10 03:00 PM', class: 'Sidewalks', urgency: 'Regular', status: 'In progress' , street: 'Al-Nakheel District'},
+      { id: 11, datetime: '2024-10-11 09:15 AM', class: 'Sidewalks', urgency: 'Urgent', status: 'Inspected', street: 'Al-Malaz District' },
+      { id: 12, datetime: '2024-10-12 10:45 AM', class: 'Barriers', urgency: 'Urgent', status: 'In progress', street: 'Al-Suwaidi District' },
+    ];
+
+
+    // Define the bounding box for Riyadh
+    const boundingBox = {
+      north: 24.826,
+      south: 24.602,
+      east: 46.882,
+      west: 46.490
+    };
+
+
+    // Add markers for each alert with more random distribution
+    alertData.forEach(alert => {
+      // Generate random coordinates within the bounding box
+      const lat = Math.random() * (boundingBox.north - boundingBox.south) + boundingBox.south;
+      const lng = Math.random() * (boundingBox.east - boundingBox.west) + boundingBox.west;
+      addMarker([lng, lat], alert.id, alert.street, alert);
+    });
+
+
+   
+
+
+
+
+  </script>
+</body>
+</html>
+
+
+
+
